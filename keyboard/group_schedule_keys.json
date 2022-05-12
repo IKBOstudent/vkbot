@@ -42,6 +42,13 @@
           "label": "какая группа?"
         },
         "color": "secondary"
-      }]
+      }],
+    [{
+      "action": {
+        "type": "text",
+        "label": "Отменить"
+      },
+      "color": "negative"
+    }]
   ]
 }

@@ -1,19 +1,50 @@
 {
-  "one_time": true,
-  "buttons": [
-    [{
-      "action": {
-        "type": "text",
-        "label": "lbl1"
-      },
-      "color": "primary"
-    }],
-    [{
-      "action": {
-        "type": "text",
-        "label": "lbl2"
-      },
-      "color": "primary"
-    }]
-  ]
+    "one_time": true,
+    "buttons": [
+        [
+            {
+                "action": {
+                    "type": "text",
+                    "label": "Красников К.Е."
+                },
+                "color": "primary"
+            }
+        ],
+        [
+            {
+                "action": {
+                    "type": "text",
+                    "label": "Красников С.А."
+                },
+                "color": "primary"
+            }
+        ],
+        [
+            {
+                "action": {
+                    "type": "text",
+                    "label": "Красин А.А."
+                },
+                "color": "primary"
+            }
+        ],
+        [
+            {
+                "action": {
+                    "type": "text",
+                    "label": "Красникова В.А."
+                },
+                "color": "primary"
+            }
+        ],
+        [
+            {
+                "action": {
+                    "type": "text",
+                    "label": "Отменить"
+                },
+                "color": "negative"
+            }
+        ]
+    ]
 }

@@ -3,6 +3,7 @@ from vk_api.longpoll import VkLongPoll, VkEventType
 # from vk_api.keyboard import VkKeyboard, VkKeyboardColor, VkKeyboardButton
 from vk_api.utils import get_random_id
 import re
+import os
 import requests
 from bs4 import BeautifulSoup
 import openpyxl
@@ -11,6 +12,7 @@ from weather_requests import make_weather_message
 from group_schedule_requests import make_group_schedule_message
 from teacher_schedule_requests import make_teacher_schedule_message
 from find_teacher import find_teacher
+from find_group import find_group
 from Client import Client
 
 
@@ -55,6 +57,9 @@ class Bot:
 
                 print(f'New message from {msg_from}, text = {received_msg}')
 
+                if msg_from not in self.users:
+                    self.users[msg_from] = Client()
+
                 if re.search(r"[Нн]ачать", received_msg):
                     message = "Этот бот позволяет узнать расписание любой группы и любого преподавателя. " \
                               "\n\nТакже Вы можете узнать погоду на выбранное время в Москве. " \
@@ -68,9 +73,6 @@ class Bot:
                     self.send_message(msg_from, message, keyboard=self.standard_keys)
                     continue
 
-                if msg_from not in self.users:
-                    self.users[msg_from] = Client()
-
                 good_msg = True
 
                 if self.users[msg_from].mode == 1:  # меню с расписанием
@@ -80,44 +82,60 @@ class Bot:
                 elif self.users[msg_from].mode == 3:  # меню с расписанием преподавателя
                     good_msg = self.teacher_schedule_handler(received_msg, msg_from)
                 elif self.users[msg_from].mode == 4:  # статус ввода группы
-                    find_group = re.search(r"[а-яА-Я]{4}\-\d\d\-\d\d", received_msg)
-                    if find_group:
-                        self.users[msg_from].group = find_group.group(0)
-                        message = "Текущая группа: " + find_group.group(0)
+                    group = re.search(r"[а-яА-Я]{4}\-\d\d\-\d\d", received_msg)
+                    if group and find_group(group.group(0)):
+                        self.users[msg_from].group = group.group(0)
+                        message = "Текущая группа: " + group.group(0)
                         self.users[msg_from].mode = 1
                         self.send_message(msg_from, message, keyboard=self.group_schedule_keys)
                     else:
                         message = "Такой группы нет(\nПопробуйте еще раз..."
-                        self.send_message(msg_from, message)
+                        self.send_message(msg_from, message, keyboard=self.cancel_keys)
                     continue
 
                 elif self.users[msg_from].mode == 5:  # статус ввода преподавателя
+                    if received_msg not in self.users[msg_from].teachers:
+                        self.send_message(msg_from, "Такого варианта нет(\nПопробуйте другой...",
+                                          keyboard=self.choose_teacher_keys)
+                        continue
+
                     self.users[msg_from].teacher = received_msg
                     message = "Выбранный преподаватель: " + received_msg
 
                     self.send_message(msg_from, message, keyboard=self.teacher_schedule_keys)
-                    good_msg = self.teacher_schedule_handler(received_msg, msg_from)
+                    self.users[msg_from].mode = 3
+                    continue
 
                 if self.users[msg_from].mode == 0 or not good_msg:
                     if re.search(r"расписание", received_msg):
                         self.users[msg_from].mode = 4
-                        self.send_message(msg_from, "Введите название группы", keyboard=self.cancel_keys)
+                        self.send_message(msg_from, "Введите название группы",
+                                          keyboard=self.cancel_keys)
 
                     elif re.search(r"[Нн]айти", received_msg):
                         self.users[msg_from].mode = 3
                         name = re.sub(r"[Нн]айти\s+", '', received_msg)
                         teachers = find_teacher(name)
+                        self.users[msg_from].teachers = teachers
                         print(teachers)
-                        if len(teachers) > 1:
+
+                        if not teachers:
+                            self.send_message(msg_from, "Такого преподавателя нет(",
+                                              keyboard=self.standard_keys)
+                        elif len(teachers) > 1:
                             self.users[msg_from].mode = 5
-                            self.send_message(msg_from, "Выберите имя преподавателя", keyboard=self.choose_teacher_keys)
+                            self.make_choose_keys(teachers)
+                            self.send_message(msg_from, "Выберите имя преподавателя",
+                                              keyboard=self.choose_teacher_keys)
                         else:
                             self.users[msg_from].teacher = name
-                            self.send_message(msg_from, "Открываю меню расписания преподавателя", keyboard=self.teacher_schedule_keys)
+                            self.send_message(msg_from, "Открываю меню расписания преподавателя",
+                                              keyboard=self.teacher_schedule_keys)
 
                     elif re.search(r"погода", received_msg):
                         self.users[msg_from].mode = 2
-                        self.send_message(msg_from, "Открываю меню погоды", keyboard=self.weather_keys)
+                        self.send_message(msg_from, "Открываю меню погоды",
+                                          keyboard=self.weather_keys)
 
                     elif re.search(r"помощь", received_msg):
                         self.users[msg_from].mode = 0
@@ -178,6 +196,30 @@ class Bot:
         self.send_message(msg_from, command, keyboard=self.teacher_schedule_keys)
         return True
 
+    def make_choose_keys(self, teachers):
+        teachers.append("Отменить")
+
+        with open(self.choose_teacher_keys, 'w', encoding="utf-8") as file:
+            file_data = {"one_time": True, "buttons":[]}
+
+            for i in teachers:
+                color = "primary"
+
+                if i == "Отменить":
+                    color = "negative"
+                new_key = {
+                    "action": {
+                        "type": "text",
+                        "label": i
+                    },
+                    "color": color
+                }
+                file_data["buttons"].append([new_key])
+
+            file.seek(0)
+            json.dump(file_data, file, indent=4, ensure_ascii=False)
+
+
     def weather_handler(self, msg, msg_from):
         if "сейчас" in msg.lower():
             message = "NOW"
@@ -215,9 +257,10 @@ def main():
 
     vkbot = Bot(vk, long_poll)
     vkbot.start()
-    # vkbot.weather_parser("NOW")
+    # vkbot.weather_parser("WEEK")
     # vkbot.group_schedule_parser("икбо-08-21")
     # vkbot.teacher_schedule_parser("Берков")
+    # vkbot.make_choose_keys(["иванова ев", "иванова са"])
 
 
 if __name__ == "__main__":

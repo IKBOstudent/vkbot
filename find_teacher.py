@@ -18,7 +18,6 @@ def find_teacher(teacher):
 
     for a_tag in result:
         table = requests.get(a_tag['href'])
-        # print(a_tag['href'])
 
         with open("table.xlsx", "wb") as f:
             f.write(table.content)
@@ -31,9 +30,10 @@ def find_teacher(teacher):
         for col in range(1, num_cols):
             if re.search(r"[а-яА-Я]{4}\-\d\d\-\d\d", str(sheet.cell(row=2, column=col).value)):
                 for row in range(4, num_rows):
-                    cell_teacher = sheet.cell(row=row, column=col + 2).value
-                    if cell_teacher and teacher in str(cell_teacher).lower():
-                        if cell_teacher not in different_teachers:
-                            different_teachers.append(cell_teacher)
+                    cell_teacher = str(sheet.cell(row=row, column=col + 2).value)
+                    for i in cell_teacher.split("\n"):
+                        if i and teacher in i.lower():
+                            if i not in different_teachers:
+                                different_teachers.append(i)
 
     return different_teachers

@@ -88,10 +88,10 @@ def make_weather_message(date):
 
     response_weather = requests.get(url)
     filepath = os.path.abspath(os.curdir) + "/tables/weather.json"
-    with open(filepath, 'w') as f:
-        json.dump(response_weather.json(), f)
+    with open(filepath, 'w', encoding='utf-8') as f:
+        json.dump(response_weather.json(), f, ensure_ascii=False, indent=4)
 
-    with open(filepath, 'r') as f:
+    with open(filepath, 'r', encoding='utf-8') as f:
         weather = json.load(f)
 
     if date == "NOW":

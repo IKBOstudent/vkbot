@@ -28,6 +28,13 @@
         "label": "на неделю"
       },
       "color": "positive"
+    }],
+    [{
+      "action": {
+        "type": "text",
+        "label": "Отменить"
+      },
+      "color": "negative"
     }]
   ]
 }
