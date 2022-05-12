@@ -6,14 +6,14 @@
         "type": "text",
         "label": "lbl1"
       },
-      "color": "default"
+      "color": "primary"
     }],
     [{
       "action": {
         "type": "text",
         "label": "lbl2"
       },
-      "color": "default"
+      "color": "primary"
     }]
   ]
 }

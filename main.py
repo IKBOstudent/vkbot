@@ -6,8 +6,12 @@ import re
 import requests
 from bs4 import BeautifulSoup
 import openpyxl
-import datetime
 import json
+from weather_requests import make_weather_message
+from group_schedule_requests import make_group_schedule_message
+from teacher_schedule_requests import make_teacher_schedule_message
+from find_teacher import find_teacher
+from Client import Client
 
 
 class Bot:
@@ -22,6 +26,7 @@ class Bot:
         self.teacher_schedule_keys = "keyboard/teacher_schedule_keys.json"
         self.choose_teacher_keys = "keyboard/choose.json"
         self.weather_keys = "keyboard/weather_keys.json"
+        self.cancel_keys = "keyboard/cancel.json"
 
     def send_message(self, user_id, message, keyboard=None):
         try:
@@ -57,183 +62,148 @@ class Bot:
                     self.send_message(msg_from, message, keyboard=self.standard_keys)
                     continue
 
+                if re.search(r"[Оо]тменить", received_msg):
+                    self.users[msg_from].mode = 0
+                    message = "Вы вернулись в основное меню"
+                    self.send_message(msg_from, message, keyboard=self.standard_keys)
+                    continue
+
                 if msg_from not in self.users:
-                    self.users[msg_from] = {'mode': 0, 'group': None, 'teacher': None}
+                    self.users[msg_from] = Client()
 
                 good_msg = True
 
-                if self.users[msg_from]['mode'] == 1:  # меню с расписанием
+                if self.users[msg_from].mode == 1:  # меню с расписанием
                     good_msg = self.group_schedule_handler(received_msg, msg_from)
-                elif self.users[msg_from]['mode'] == 2:  # меню с погодой
+                elif self.users[msg_from].mode == 2:  # меню с погодой
                     good_msg = self.weather_handler(received_msg, msg_from)
-                elif self.users[msg_from]['mode'] == 3:  # меню с расписанием преподавателя
+                elif self.users[msg_from].mode == 3:  # меню с расписанием преподавателя
                     good_msg = self.teacher_schedule_handler(received_msg, msg_from)
-                elif self.users[msg_from]['mode'] == 4:  # статус ввода группы
+                elif self.users[msg_from].mode == 4:  # статус ввода группы
                     find_group = re.search(r"[а-яА-Я]{4}\-\d\d\-\d\d", received_msg)
                     if find_group:
-                        self.users[msg_from]['group'] = find_group.group(0)
+                        self.users[msg_from].group = find_group.group(0)
                         message = "Текущая группа: " + find_group.group(0)
-                        self.users[msg_from]['mode'] = 1
+                        self.users[msg_from].mode = 1
                         self.send_message(msg_from, message, keyboard=self.group_schedule_keys)
                     else:
                         message = "Такой группы нет(\nПопробуйте еще раз..."
                         self.send_message(msg_from, message)
                     continue
 
-                elif self.users[msg_from]['mode'] == 5:  # статус ввода преподавателя
-                    self.users[msg_from]['teacher'] = received_msg
+                elif self.users[msg_from].mode == 5:  # статус ввода преподавателя
+                    self.users[msg_from].teacher = received_msg
                     message = "Выбранный преподаватель: " + received_msg
 
                     self.send_message(msg_from, message, keyboard=self.teacher_schedule_keys)
                     good_msg = self.teacher_schedule_handler(received_msg, msg_from)
 
-
-                if self.users[msg_from]['mode'] == 0 or not good_msg:
-                    if re.search(r"[Дд]омой", received_msg):
-                        self.users[msg_from]['mode'] = 0
-                        message = "Вы вернулись в основное меню"
-                        self.send_message(msg_from, message, keyboard=self.standard_keys)
-
-                    elif re.search(r"расписание", received_msg):
-                        self.users[msg_from]['mode'] = 4
-                        self.send_message(msg_from, "Введите название группы")
+                if self.users[msg_from].mode == 0 or not good_msg:
+                    if re.search(r"расписание", received_msg):
+                        self.users[msg_from].mode = 4
+                        self.send_message(msg_from, "Введите название группы", keyboard=self.cancel_keys)
 
                     elif re.search(r"[Нн]айти", received_msg):
+                        self.users[msg_from].mode = 3
                         name = re.sub(r"[Нн]айти\s+", '', received_msg)
-                        print(name)
-                        self.teacher_schedule_handler(received_msg, msg_from)
+                        teachers = find_teacher(name)
+                        print(teachers)
+                        if len(teachers) > 1:
+                            self.users[msg_from].mode = 5
+                            self.send_message(msg_from, "Выберите имя преподавателя", keyboard=self.choose_teacher_keys)
+                        else:
+                            self.users[msg_from].teacher = name
+                            self.send_message(msg_from, "Открываю меню расписания преподавателя", keyboard=self.teacher_schedule_keys)
 
                     elif re.search(r"погода", received_msg):
-                        self.users[msg_from]['mode'] = 2
+                        self.users[msg_from].mode = 2
                         self.send_message(msg_from, "Открываю меню погоды", keyboard=self.weather_keys)
 
                     elif re.search(r"помощь", received_msg):
-                        self.users[msg_from]['mode'] = 0
+                        self.users[msg_from].mode = 0
                         message = "Чтобы пользоваться ботом напишите в чат что-нибудь..."
                         self.send_message(msg_from, message, keyboard=self.standard_keys)
 
                     else:
-                        self.users[msg_from]['mode'] = 0
+                        self.users[msg_from].mode = 0
                         message = "Не понял Вас..."
                         self.send_message(msg_from, message, keyboard=self.standard_keys)
 
     def group_schedule_handler(self, msg, msg_from):
-        if "на сегодня" in msg:
+        open_schedule = False
+        command = ""
+        if "сегодня" in msg.lower():
             message = "TOD"
-        elif "на завтра" in msg:
+            open_schedule = True
+            command = message
+        elif "завтра" in msg.lower():
             message = "TOM"
-        elif "на эту неделю" in msg:
+            open_schedule = True
+            command = message
+        elif "на эту неделю" in msg.lower():
             message = "THIS WEEK"
-        elif "на следующую неделю" in msg:
+            open_schedule = True
+            command = message
+        elif "на следующую неделю" in msg.lower():
             message = "NEXT WEEK"
-        elif "какая неделя" in msg:
+            open_schedule = True
+            command = message
+        elif "какая неделя" in msg.lower():
             message = "Идет 15 неделя"
-        elif "какая группа" in msg:
-            message = "Показываю расписание группы " + self.users[msg_from]['group']
+        elif "какая группа" in msg.lower():
+            message = "Показываю расписание группы " + self.users[msg_from].group
         else:
-            self.users[msg_from]['mode'] = 0
+            self.users[msg_from].mode = 0
             return False
 
+        if open_schedule:
+            self.teacher_schedule_parser(self.users[msg_from].group, command)
         self.send_message(msg_from, message, keyboard=self.group_schedule_keys)
         return True
 
     def teacher_schedule_handler(self, msg, msg_from):
-        # self.users[msg_from]['mode'] = 3
-        # self.users[msg_from]['mode'] = 5
-        if "на сегодня" in msg:
-            message = "TOD"
-        elif "на завтра" in msg:
-            message = "TOM"
-        elif "на эту неделю" in msg:
-            message = "THIS WEEK"
-        elif "на следующую неделю" in msg:
-            message = "NEXT WEEK"
+        if "сегодня" in msg.lower():
+            command = "TOD"
+        elif "завтра" in msg.lower():
+            command = "TOM"
+        elif "на эту неделю" in msg.lower():
+            command = "THIS WEEK"
+        elif "на следующую неделю" in msg.lower():
+            command = "NEXT WEEK"
         else:
-            self.users[msg_from]['mode'] = 0
+            self.users[msg_from].mode = 0
             return False
 
-        self.send_message(msg_from, message, keyboard=self.teacher_schedule_keys)
+        self.teacher_schedule_parser(msg, command)
+        self.send_message(msg_from, command, keyboard=self.teacher_schedule_keys)
         return True
 
     def weather_handler(self, msg, msg_from):
-        if "сейчас" in msg:
+        if "сейчас" in msg.lower():
             message = "NOW"
-        elif "сегодня" in msg:
+        elif "сегодня" in msg.lower():
             message = "TOD"
-        elif "завтра" in msg:
+        elif "завтра" in msg.lower():
             message = "TOM"
-        elif "на неделю" in msg:
+        elif "недел" in msg.lower():
             message = "WEEK"
         else:
-            self.users[msg_from]['mode'] = 0
+            self.users[msg_from].mode = 0
             return False
+
+        self.weather_parser(message)
 
         self.send_message(msg_from, message, keyboard=self.weather_keys)
         return True
 
-    def group_schedule_parser(self):
-        gggg = "ИКБО-08-21"
-        page = requests.get("https://www.mirea.ru/schedule/")
-        soup = BeautifulSoup(page.text, "html.parser")
+    def group_schedule_parser(self, group, command):
+        make_group_schedule_message(group, command)
 
-        result = soup.find("div", {"class": "rasspisanie"}).\
-            find(string="Институт информационных технологий").\
-            find_parent("div").find_parent("div").find_all("a", {"class": "uk-link-toggle"})
+    def teacher_schedule_parser(self, teacher, command):
+        make_teacher_schedule_message(teacher, command)
 
-        course = datetime.datetime.now().year % 100 - int(gggg[-2:])
-        for a_tag in result:
-            if re.search(r"ИИТ_" + str(course), a_tag['href']):
-                table = requests.get(a_tag['href'])
-                print(table)
-
-                with open("table.xlsx", "wb") as f:
-                    f.write(table.content)
-
-                book = openpyxl.load_workbook("table.xlsx")
-                sheet = book.active
-                num_cols = sheet.max_column
-                num_rows = sheet.max_row
-
-                find_group_col = 0
-                for col in range(1, num_cols):
-                    if str(sheet.cell(row=2, column=col).value) == gggg:
-                        find_group_col = col
-                        break
-
-                for row in range(1, num_rows):
-                    if sheet.cell(row=row, column=find_group_col).value:
-                        print(sheet.cell(row=row, column=find_group_col).value)
-
-    def teacher_schedule_parser(self):
-        tttt = "Берков".lower()
-
-        page = requests.get("https://www.mirea.ru/schedule/")
-        soup = BeautifulSoup(page.text, "html.parser")
-
-        result = soup.find("div", {"class": "rasspisanie"}). \
-            find(string="Институт информационных технологий"). \
-            find_parent("div").find_parent("div").find_all("a", {"class": "uk-link-toggle"})
-
-        for a_tag in result:
-            table = requests.get(a_tag['href'])
-
-            with open("table.xlsx", "wb") as f:
-                f.write(table.content)
-
-            book = openpyxl.load_workbook("table.xlsx")
-            sheet = book.active
-            num_cols = sheet.max_column
-            num_rows = sheet.max_row
-
-            for col in range(1, num_cols):
-                if re.search(r"[а-яА-Я]{4}\-\d\d\-\d\d", str(sheet.cell(row=2, column=col).value)):
-                    for row in range(4, num_rows):
-                        teacher = sheet.cell(row=row, column=col+2).value
-                        if teacher and tttt in str(teacher).lower():
-                            print(teacher, sheet.cell(row=2, column=col).value)
-
-    # def weather_parser(self):
-        
+    def weather_parser(self, date):
+        make_weather_message(date)
 
 
 def main():
@@ -244,8 +214,10 @@ def main():
     long_poll = VkLongPoll(vk_session)
 
     vkbot = Bot(vk, long_poll)
-    # vkbot.start()
-    vkbot.teacher_schedule_parser()
+    vkbot.start()
+    # vkbot.weather_parser("NOW")
+    # vkbot.group_schedule_parser("икбо-08-21")
+    # vkbot.teacher_schedule_parser("Берков")
 
 
 if __name__ == "__main__":
