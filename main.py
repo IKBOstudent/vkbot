@@ -1,5 +1,6 @@
 import urllib3
 import math
+import time
 import datetime
 import vk_api
 from vk_api import VkUpload
@@ -24,7 +25,7 @@ class Bot:
         self.vk = vk
         self.long_poll = long_poll
 
-        self.USERS = {}
+        self.USERS_active = {}
 
         self.standard_keys = "keyboard/default.json"
         self.group_schedule_keys = "keyboard/group_schedule_keys.json"
@@ -32,6 +33,7 @@ class Bot:
         self.choose_teacher_keys = "keyboard/choose.json"
         self.weather_keys = "keyboard/weather_keys.json"
         self.cancel_keys = "keyboard/cancel.json"
+        self.begin_keys = "keyboard/begin.json"
 
     def send_message(self, user_id, message, keyboard=None, attachment=None):
         try:
@@ -68,15 +70,38 @@ class Bot:
             print("Ошибка доступа")
 
     def start(self):
-        for event in self.long_poll.listen():
+        lp_listen = self.long_poll.listen()
+        print("server started...")
+        with open("prev_users.json", 'r', encoding="utf-8") as file:
+            file_data = json.load(file)
+            message = "Напишите в чат \"Начать\", чтобы узнать возможности бота"
+            for user in file_data["users"]:
+                self.send_message(user["id"], message, keyboard=self.begin_keys)
+
+        for event in lp_listen:
             if event.type == VkEventType.MESSAGE_NEW and event.text and event.to_me:
                 received_msg = event.text
                 msg_from = event.user_id
 
                 print(f'New message from {msg_from}, text = {received_msg}')
 
-                if msg_from not in self.USERS:
-                    self.USERS[msg_from] = Client()
+                if msg_from not in self.USERS_active:
+                    self.USERS_active[msg_from] = Client()
+
+                    with open("prev_users.json", 'r+', encoding="utf-8") as file:
+                        file_data = json.load(file)
+                        new_user = True
+                        if len(file_data["users"]) > 0:
+                            for user in file_data["users"]:
+                                if user["id"] == msg_from:
+                                    new_user = False
+                                    break
+
+                        if new_user:
+                            file_data["users"].append({"id": msg_from})
+
+                        file.seek(0)
+                        json.dump(file_data, file, indent=4, ensure_ascii=False)
 
                 if re.search(r"[Нн]ачать", received_msg):
                     message = "Этот бот позволяет узнать расписание любой группы и любого преподавателя. " \
@@ -86,66 +111,66 @@ class Bot:
                     continue
 
                 if re.search(r"[Оо]тменить", received_msg):
-                    self.USERS[msg_from].mode = 0
+                    self.USERS_active[msg_from].mode = 0
                     message = "Вы вернулись в основное меню"
                     self.send_message(msg_from, message, keyboard=self.standard_keys)
                     continue
 
                 good_msg = True
 
-                if self.USERS[msg_from].mode == 1:  # меню с расписанием
+                if self.USERS_active[msg_from].mode == 1:  # меню с расписанием
                     good_msg = self.group_schedule_handler(received_msg, msg_from)
-                elif self.USERS[msg_from].mode == 2:  # меню с погодой
+                elif self.USERS_active[msg_from].mode == 2:  # меню с погодой
                     good_msg = self.weather_handler(received_msg, msg_from)
-                elif self.USERS[msg_from].mode == 3:  # меню с расписанием преподавателя
+                elif self.USERS_active[msg_from].mode == 3:  # меню с расписанием преподавателя
                     good_msg = self.teacher_schedule_handler(received_msg, msg_from)
-                elif self.USERS[msg_from].mode == 4:  # статус ввода группы
+                elif self.USERS_active[msg_from].mode == 4:  # статус ввода группы
                     group = re.search(r"[а-яА-Я]{4}\-\d\d\-\d\d", received_msg)
                     self.send_message(msg_from, "Поиск группы... Ожидайте.")
                     if group and find_group(group.group(0)):
-                        self.USERS[msg_from].group = group.group(0).upper()
+                        self.USERS_active[msg_from].group = group.group(0).upper()
                         message = "Текущая группа: " + group.group(0).upper() + \
                                   "\nНа какой период показать расписание?"
-                        self.USERS[msg_from].mode = 1
+                        self.USERS_active[msg_from].mode = 1
                         self.send_message(msg_from, message, keyboard=self.group_schedule_keys)
                     else:
                         message = "Такой группы нет(\nПопробуйте еще раз..."
                         self.send_message(msg_from, message, keyboard=self.cancel_keys)
                     continue
 
-                elif self.USERS[msg_from].mode == 5:  # статус ввода преподавателя
-                    if received_msg not in self.USERS[msg_from].teachers:
+                elif self.USERS_active[msg_from].mode == 5:  # статус ввода преподавателя
+                    if received_msg not in self.USERS_active[msg_from].teachers:
                         self.send_message(msg_from, "Такого варианта нет(\nПопробуйте другой...",
                                           keyboard=self.choose_teacher_keys)
                         continue
 
-                    self.USERS[msg_from].teacher = received_msg
+                    self.USERS_active[msg_from].teacher = received_msg
                     message = "Выбранный преподаватель: " + received_msg + \
                               "\nНа какой период показать расписание?"
 
                     self.send_message(msg_from, message, keyboard=self.teacher_schedule_keys)
-                    self.USERS[msg_from].mode = 3
+                    self.USERS_active[msg_from].mode = 3
                     continue
 
-                if self.USERS[msg_from].mode == 0 or not good_msg:
+                if self.USERS_active[msg_from].mode == 0 or not good_msg:
                     if re.search(r"[Рр]асписание", received_msg):
-                        self.USERS[msg_from].mode = 4
+                        self.USERS_active[msg_from].mode = 4
                         self.send_message(msg_from, "Введите название группы",
                                           keyboard=self.cancel_keys)
 
                     elif re.search(r"[Нн]айти", received_msg):
-                        self.USERS[msg_from].mode = 3
+                        self.USERS_active[msg_from].mode = 3
                         self.send_message(msg_from, "Поиск преподавателя... Ожидайте.")
                         name = re.sub(r"[Нн]айти\s+", '', received_msg)
                         teachers = find_teacher(name)
-                        self.USERS[msg_from].teachers = teachers
+                        self.USERS_active[msg_from].teachers = teachers
                         print(teachers)
 
                         if not teachers:
                             self.send_message(msg_from, "Такого преподавателя нет(",
                                               keyboard=self.standard_keys)
                         elif 1 < len(teachers) <= 6:
-                            self.USERS[msg_from].mode = 5
+                            self.USERS_active[msg_from].mode = 5
                             self.make_choose_keys(teachers)
                             self.send_message(msg_from, "Выберите имя преподавателя",
                                               keyboard=self.choose_teacher_keys)
@@ -154,22 +179,22 @@ class Bot:
                                                         "\nПопробуйте уточнить Ваш запрос...",
                                               keyboard=self.standard_keys)
                         else:
-                            self.USERS[msg_from].teacher = teachers[0]
+                            self.USERS_active[msg_from].teacher = teachers[0]
                             self.send_message(msg_from, "Открываю меню расписания преподавателя",
                                               keyboard=self.teacher_schedule_keys)
 
                     elif re.search(r"[Пп]огода", received_msg):
-                        self.USERS[msg_from].mode = 2
+                        self.USERS_active[msg_from].mode = 2
                         self.send_message(msg_from, "Открываю меню погоды",
                                           keyboard=self.weather_keys)
 
                     elif re.search(r"[Пп]омощь", received_msg):
-                        self.USERS[msg_from].mode = 0
+                        self.USERS_active[msg_from].mode = 0
                         message = "Чтобы пользоваться ботом напишите в чат что-нибудь..."
                         self.send_message(msg_from, message, keyboard=self.standard_keys)
 
                     else:
-                        self.USERS[msg_from].mode = 0
+                        self.USERS_active[msg_from].mode = 0
                         message = "Не понял Вас..."
                         self.send_message(msg_from, message, keyboard=self.standard_keys)
 
@@ -194,7 +219,7 @@ class Bot:
                            datetime.datetime.strptime("07.02.2022", '%d.%m.%Y').date()
             message = f"Идет {math.ceil(current_week.days / 7)} неделя"
         elif "какая группа" in msg.lower():
-            message = "Показываю расписание группы " + self.USERS[msg_from].group
+            message = "Показываю расписание группы " + self.USERS_active[msg_from].group
         elif "понедельник" in msg.lower():
             command = "ПН"
             open_schedule = True
@@ -216,13 +241,13 @@ class Bot:
         elif "воскресенье" in msg.lower():
             message = "Воскресенье - выходной"
         else:
-            self.USERS[msg_from].mode = 0
+            self.USERS_active[msg_from].mode = 0
             return False
 
         if open_schedule:
             self.send_message(msg_from, "Поиск расписания группы... Ожидайте.")
-            self.group_schedule_parser(self.USERS[msg_from].group, command)
-            message = f"расписание {self.USERS[msg_from].group} на {command}"
+            self.group_schedule_parser(self.USERS_active[msg_from].group, command)
+            message = f"расписание {self.USERS_active[msg_from].group} на {command}"
         self.send_message(msg_from, message, keyboard=self.group_schedule_keys)
         return True
 
@@ -236,13 +261,13 @@ class Bot:
         elif "на следующую неделю" in msg.lower():
             command = "NEXT WEEK"
         else:
-            self.USERS[msg_from].mode = 0
+            self.USERS_active[msg_from].mode = 0
             return False
 
         self.send_message(msg_from, "Поиск расписания преподавателя... Ожидайте.")
-        self.teacher_schedule_parser(self.USERS[msg_from].teacher, command)
+        self.teacher_schedule_parser(self.USERS_active[msg_from].teacher, command)
 
-        self.send_message(msg_from, f"расписание {self.USERS[msg_from].teacher} на {command}",
+        self.send_message(msg_from, f"расписание {self.USERS_active[msg_from].teacher} на {command}",
                           keyboard=self.teacher_schedule_keys)
         return True
 
@@ -278,7 +303,7 @@ class Bot:
         elif "недел" in msg.lower():
             message = "WEEK"
         else:
-            self.USERS[msg_from].mode = 0
+            self.USERS_active[msg_from].mode = 0
             return False
 
         self.send_message(msg_from, "Поиск погоды... Ожидайте.")
@@ -343,12 +368,12 @@ def main():
     long_poll = VkLongPoll(vk_session)
 
     vkbot = Bot(vk_session, vk, long_poll)
-    # vkbot.start()
+    vkbot.start()
     # vkbot.weather_parser("WEEK")
     # vkbot.teacher_schedule_parser("Берков")
     # vkbot.make_choose_keys(["иванова ев", "иванова са"])
 
-    make_group_schedule_message("инбо-03-21", "THIS WEEK")
+    # make_group_schedule_message("инбо-03-21", "THIS WEEK")
     # make_teacher_schedule_message("егиазарян к.т.", "TOD")
     # find_teacher("хусяин")
 

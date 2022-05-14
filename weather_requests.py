@@ -108,7 +108,7 @@ def make_weather_message(date):
 
             icons.append(iconurl)
 
-            result.append("СЕЙЧАС\n" + formatted_weather(current_weather['weather'][0]['description'],
+            result.append("СЕЙЧАС\n\n" + formatted_weather(current_weather['weather'][0]['description'],
                                             current_weather['main']['temp'],
                                             current_weather['main']['feels_like'],
                                             current_weather['main']['pressure'],
@@ -140,13 +140,13 @@ def make_weather_message(date):
                 for time in range(4):
                     if current_weather['dt_txt'] == time_good[time]:
                         if time == 0:
-                            message = "УТРО\n"
+                            message = "УТРО\n\n"
                         elif time == 1:
-                            message = "ДЕНЬ\n"
+                            message = "ДЕНЬ\n\n"
                         elif time == 2:
-                            message = "ВЕЧЕР\n"
+                            message = "ВЕЧЕР\n\n"
                         else:
-                            message = "НОЧЬ\n"
+                            message = "НОЧЬ\n\n"
 
                 message += formatted_weather(current_weather['weather'][0]['description'],
                                              current_weather['main']['temp'],
@@ -180,13 +180,13 @@ def make_weather_message(date):
                 icons.append(iconurl)
 
                 if i == 1:
-                    message = "УТРО\n"
+                    message = "УТРО\n\n"
                 elif i == 2:
-                    message = "ДЕНЬ\n"
+                    message = "ДЕНЬ\n\n"
                 elif i == 3:
-                    message = "ВЕЧЕР\n"
+                    message = "ВЕЧЕР\n\n"
                 else:
-                    message = "НОЧЬ\n"
+                    message = "НОЧЬ\n\n"
 
                 message += formatted_weather(current_weather['weather'][0]['description'],
                                              current_weather['main']['temp'],
