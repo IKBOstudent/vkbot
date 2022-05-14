@@ -123,10 +123,13 @@ def make_teacher_schedule_message(teacher, command):
             else:
                 result = []
                 if command == "TOD":
-                    message = f'Расписание {teacher_schedule["teacher"]} на сегодня\n'
+                    if today == 6:
+                        message = "Сегодня воскресенье"
+                    else:
+                        message = f'Расписание {teacher_schedule["teacher"]} на сегодня\n'
 
-                    col_name = "even" if even_week else "odd"
-                    message += formatted_message(teacher_data, weekdays[today], col_name, current_week)
+                        col_name = "even" if even_week else "odd"
+                        message += formatted_message(teacher_data, weekdays[today], col_name, current_week)
                     result.append(message)
 
                 elif command == "TOM":

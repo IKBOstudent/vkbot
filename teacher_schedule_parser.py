@@ -1,6 +1,5 @@
 import os
 import json
-import datetime
 
 weekdays = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ"]
 

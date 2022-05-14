@@ -24,7 +24,6 @@ def group_schedule_parser():
             continue
 
         table = requests.get(a_tag['href'])
-        print(table)
 
         with open("table.xlsx", "wb") as f:
             f.write(table.content)
@@ -69,17 +68,24 @@ def group_schedule_parser():
                         col_name = "even"
 
                     if re.search(r"[А-Яа-яёЁ]+", str(subject)):
+
                         schedule_data[col_name][weekdays[i]][num]["subject"] = str(subject)
-                        if teacher and not re.search(r"[0-9]", str(teacher)):
-                            exclusive1 = "Гриценко"
-                            exclusive2 = "Ноовсёлова"
+                        if teacher:
+
+                            exclusives = ["Гриценко", "Ноовсёлова", "Молчанов"]
                             t_list = []
-                            if exclusive1 not in str(teacher) and exclusive2 not in str(teacher):
+                            inside = False
+                            for ex in exclusives:
+                                if ex in str(teacher):
+                                    inside = True
+                                    break
+
+                            if not inside:
                                 ff = re.findall(r"[А-Яа-яЁё]+-?[А-Яа-яЁё]+ +[A-ЯЁ][., ]+[A-ЯЁ][., ]?", str(teacher))
 
                             else:
-                                if exclusive1 not in different_teachers:
-                                    different_teachers.append(exclusive1)
+                                if exclusives[0] not in different_teachers:
+                                    different_teachers.append(exclusives[0])
                                 ff = str(teacher).split("\n")
 
                             for match in ff:
@@ -96,6 +102,8 @@ def group_schedule_parser():
                                     match = "Ануфриев О.С"
                                 elif match == "Ноовсёлова":
                                     match = "Новосёлова Е.В"
+                                elif match == "Молчанова" or match == "Молчановва":
+                                    match = "Молчанова И.В"
 
                                 t_list.append(match)
                                 if match not in different_teachers:
@@ -119,5 +127,3 @@ def group_schedule_parser():
     filepath2 = os.path.abspath(os.curdir) + "/tables/teachers.json"
     with open(filepath2, 'w', encoding="utf-8") as file:
         json.dump({"teachers": different_teachers}, file, indent=4, ensure_ascii=False)
-
-

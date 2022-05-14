@@ -1,11 +1,8 @@
-import urllib3
 import math
-import time
 import datetime
 import vk_api
 from vk_api import VkUpload
 from vk_api.longpoll import VkLongPoll, VkEventType
-# from vk_api.keyboard import VkKeyboard, VkKeyboardColor, VkKeyboardButton
 from vk_api.utils import get_random_id
 import re
 import os
@@ -387,9 +384,7 @@ def main():
     vkbot.start()
 
     # make_group_schedule_message("икбо-08-21", "NEXT WEEK")
-    # make_teacher_schedule_message("гриценко", "NEXT WEEK")
-    # find_teacher("хусяин")
-    # find_group("икбо-31-21")
+    # make_teacher_schedule_message("Богомольная Г.В", "NEXT WEEK")
 
 
 if __name__ == "__main__":

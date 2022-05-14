@@ -5,7 +5,7 @@
             {
                 "action": {
                     "type": "text",
-                    "label": "Горшунова Т.А"
+                    "label": "Смирнов Н.А"
                 },
                 "color": "primary"
             }
@@ -14,7 +14,43 @@
             {
                 "action": {
                     "type": "text",
-                    "label": "Лагунова А.Д"
+                    "label": "Мирзоян Д.И"
+                },
+                "color": "primary"
+            }
+        ],
+        [
+            {
+                "action": {
+                    "type": "text",
+                    "label": "Немировская-Дутчак О.Э"
+                },
+                "color": "primary"
+            }
+        ],
+        [
+            {
+                "action": {
+                    "type": "text",
+                    "label": "Миронов А.Н"
+                },
+                "color": "primary"
+            }
+        ],
+        [
+            {
+                "action": {
+                    "type": "text",
+                    "label": "Миронов А.И"
+                },
+                "color": "primary"
+            }
+        ],
+        [
+            {
+                "action": {
+                    "type": "text",
+                    "label": "Миронов Н.М"
                 },
                 "color": "primary"
             }
