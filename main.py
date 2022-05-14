@@ -11,6 +11,9 @@ import re
 import os
 import requests
 import json
+
+from group_schedule_parser import group_schedule_parser
+from teacher_schedule_parser import teacher_schedule_parser
 from weather_requests import make_weather_message
 from group_schedule_requests import make_group_schedule_message
 from teacher_schedule_requests import make_teacher_schedule_message
@@ -246,9 +249,9 @@ class Bot:
 
         if open_schedule:
             self.send_message(msg_from, "Поиск расписания группы... Ожидайте.")
-            self.group_schedule_parser(self.USERS_active[msg_from].group, command)
-            message = f"расписание {self.USERS_active[msg_from].group} на {command}"
-        self.send_message(msg_from, message, keyboard=self.group_schedule_keys)
+            self.group_schedule_sender(msg_from, self.USERS_active[msg_from].group, command)
+        else:
+            self.send_message(msg_from, message, keyboard=self.group_schedule_keys)
         return True
 
     def teacher_schedule_handler(self, msg, msg_from):
@@ -265,7 +268,7 @@ class Bot:
             return False
 
         self.send_message(msg_from, "Поиск расписания преподавателя... Ожидайте.")
-        self.teacher_schedule_parser(self.USERS_active[msg_from].teacher, command)
+        self.teacher_schedule_sender(self.USERS_active[msg_from].teacher, command)
 
         self.send_message(msg_from, f"расписание {self.USERS_active[msg_from].teacher} на {command}",
                           keyboard=self.teacher_schedule_keys)
@@ -310,10 +313,15 @@ class Bot:
         self.weather_parser(msg_from, message)
         return True
 
-    def group_schedule_parser(self, group, command):
-        make_group_schedule_message(group, command)
+    def group_schedule_sender(self, msg_from, group, command):
+        schedule = make_group_schedule_message(group, command)
+        for i in range(len(schedule)):
+            if i == len(schedule) - 1:
+                self.send_message(msg_from, schedule[i], keyboard=self.group_schedule_keys)
+            else:
+                self.send_message(msg_from, schedule[i])
 
-    def teacher_schedule_parser(self, teacher, command):
+    def teacher_schedule_sender(self, teacher, command):
         make_teacher_schedule_message(teacher, command)
 
     def weather_parser(self, msg_from, date):
@@ -367,15 +375,19 @@ def main():
     vk = vk_session.get_api()
     long_poll = VkLongPoll(vk_session)
 
+    group_schedule_parser()
+    # teacher_schedule_parser()
+
     vkbot = Bot(vk_session, vk, long_poll)
-    vkbot.start()
+    # vkbot.start()
     # vkbot.weather_parser("WEEK")
     # vkbot.teacher_schedule_parser("Берков")
     # vkbot.make_choose_keys(["иванова ев", "иванова са"])
 
-    # make_group_schedule_message("инбо-03-21", "THIS WEEK")
+    # make_group_schedule_message("икбо-31-21", "NEXT WEEK")
     # make_teacher_schedule_message("егиазарян к.т.", "TOD")
     # find_teacher("хусяин")
+    # find_group("икбо-31-21")
 
 
 if __name__ == "__main__":

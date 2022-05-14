@@ -5,7 +5,7 @@
             {
                 "action": {
                     "type": "text",
-                    "label": "Горшунова Т.А."
+                    "label": "Красников К.Е"
                 },
                 "color": "primary"
             }
@@ -14,7 +14,16 @@
             {
                 "action": {
                     "type": "text",
-                    "label": "Лагунова А.Д."
+                    "label": "Красников С.А"
+                },
+                "color": "primary"
+            }
+        ],
+        [
+            {
+                "action": {
+                    "type": "text",
+                    "label": "Красникова В.А"
                 },
                 "color": "primary"
             }

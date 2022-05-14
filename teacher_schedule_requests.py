@@ -23,10 +23,6 @@ def make_teacher_schedule_message(teacher, command):
     today = datetime.datetime.now().weekday()
     tomorrow = (datetime.datetime.now() + datetime.timedelta(days=1)).weekday()
 
-    # print("week:", current_week,
-    #       "today:", weekdays[today],
-    #       "tomorrow:", weekdays[tomorrow])
-
     page = requests.get("https://www.mirea.ru/schedule/")
     soup = BeautifulSoup(page.text, "html.parser")
 
@@ -34,7 +30,7 @@ def make_teacher_schedule_message(teacher, command):
         find(string="Институт информационных технологий"). \
         find_parent("div").find_parent("div").find_all("a", {"class": "uk-link-toggle"})
 
-    file_data = {"group": teacher, "timetable": {}}
+    file_data = {"teacher": teacher, "timetable": {}}
 
     schedule_data = {"odd": {}, "even": {}}
     for d in weekdays:
@@ -48,6 +44,9 @@ def make_teacher_schedule_message(teacher, command):
                 schedule_data["even"][d][n].update({f: '-'})
 
     for a_tag in result:
+        if "ИИТ_4" in a_tag['href']:
+            continue
+
         table = requests.get(a_tag['href'])
 
         with open("table.xlsx", "wb") as f:

@@ -1,8 +1,5 @@
 import re
 import os
-import requests
-from bs4 import BeautifulSoup
-import openpyxl
 import math
 import datetime
 import json
@@ -27,14 +24,14 @@ def parser_for_weeks(s, flag_krome):
     return weeks
 
 
-def formatted_message(file_data, weekday, col_name, current_week):
+def formatted_message(schedule_data, weekday, col_name, current_week):
     message = ""
     for i in range(1, 7):
         num = str(i)
-        subject = file_data["timetable"][col_name][weekdays[weekday]][num]["subject"]
-        type_sub = file_data["timetable"][col_name][weekdays[weekday]][num]["type"]
-        aud = file_data["timetable"][col_name][weekdays[weekday]][num]["aud"]
-        teacher = file_data["timetable"][col_name][weekdays[weekday]][num]["teacher"]
+        subject = schedule_data[col_name][weekday][num]["subject"]
+        type_sub = schedule_data[col_name][weekday][num]["type"]
+        aud = schedule_data[col_name][weekday][num]["aud"]
+        teacher = schedule_data[col_name][weekday][num]["teacher"]
 
         if subject == "-":
             message += f"\n{num}. -"
@@ -44,7 +41,7 @@ def formatted_message(file_data, weekday, col_name, current_week):
             chose = -1
             no_split = False
             no_split_subject = []
-            if "(1 п/г)" in subject:
+            if "(1 п/г)" in subject and "(2 п/г)" in subject:
                 no_split = True
 
             for sub in subject.split("\n"):
@@ -78,29 +75,33 @@ def formatted_message(file_data, weekday, col_name, current_week):
                         break
 
             if no_split:
-                subject = " | ".join(no_split_subject)
+                type_sub = type_sub.split('\n')
+                aud = aud.split('\n')
+                teacher = teacher.split('\n')
+                for j in range(len(no_split_subject)):
+                    message += f'\n{num}. {no_split_subject[j]}'
 
-            if chose != -1:
+                    a = type_sub[j].replace("  ", " ")
+                    message += f' ({a.strip()})'
+
+                    b = aud[j].replace("  ", " ")
+                    message += f', ауд. {b.strip()}'
+
+                    c = teacher[j].replace("  ", " ")
+                    message += f', ауд. {c.strip()}'
+
+            elif chose != -1:
                 message += "\n" + f'{i}. {subject}'
                 if type_sub != '-':
-                    if not no_split:
-                        type_sub = type_sub.split('\n')[chose]
-                    else:
-                        type_sub = type_sub.replace("\n", " | ")
+                    type_sub = type_sub.split('\n')[chose]
                     type_sub = type_sub.replace("  ", " ")
                     message += f' ({type_sub})'
                 if aud != '-':
-                    if not no_split:
-                        aud = aud.split('\n')[chose]
-                    else:
-                        aud = aud.replace("\n", " | ")
+                    aud = aud.split('\n')[chose]
                     aud = aud.replace("  ", " ")
                     message += f', ауд. {aud}'
                 if teacher != '-':
-                    if not no_split:
-                        teacher = teacher.split('\n')[chose]
-                    else:
-                        teacher = teacher.replace("\n", " | ")
+                    teacher = teacher.split('\n')[chose]
                     teacher = teacher.replace("  ", " ")
                     message += f', преп. {teacher}'
             else:
@@ -115,119 +116,73 @@ def make_group_schedule_message(group, command):
     current_week = datetime.datetime.now().date() - \
                    datetime.datetime.strptime("07.02.2022", '%d.%m.%Y').date()
     current_week = math.ceil(current_week.days / 7)
-    current_week = 16
     even_week = current_week % 2 == 0
 
     today = datetime.datetime.now().weekday()
     tomorrow = (datetime.datetime.now() + datetime.timedelta(days=1)).weekday()
 
-    # print("week:", current_week,
-    #       "today:", weekdays[today],
-    #       "tomorrow:", weekdays[tomorrow])
+    filepath = os.path.abspath(os.curdir) + "/tables/groups_schedule.json"
+    with open(filepath, 'r', encoding="utf-8") as file:
+        file_data = json.load(file)
 
-    page = requests.get("https://www.mirea.ru/schedule/")
-    soup = BeautifulSoup(page.text, "html.parser")
+    for group_data in file_data["groups"]:
+        if group_data["group"] == group:
+            schedule_data = group_data["timetable"]
 
-    result = soup.find("div", {"class": "rasspisanie"}). \
-        find(string="Институт информационных технологий"). \
-        find_parent("div").find_parent("div").find_all("a", {"class": "uk-link-toggle"})
+            if not schedule_data:
+                print("Ошибка группы")
+                return ["Ошибка группы"]
+            else:
+                result = []
+                if command == "TOD":
+                    message = "Расписание на сегодня\n"
+                    col_name = "even" if even_week else "odd"
+                    message += formatted_message(schedule_data, weekdays[today], col_name, current_week)
+                    result.append(message)
 
-    file_data = {"group": group, "timetable": {}}
+                elif command == "TOM":
+                    if tomorrow == 6:
+                        message = "Завтра воскресенье"
+                    else:
+                        message = "Расписание на завтра\n"
+                        col_name = "even" if even_week else "odd"
+                        if tomorrow == 0:
+                            current_week += 1
+                            col_name = "odd" if even_week else "even"
+                        message += formatted_message(schedule_data, weekdays[tomorrow], col_name, current_week)
+                    result.append(message)
 
-    course = datetime.datetime.now().year % 100 - int(group[-2:])
-    for a_tag in result:
-        if re.search(r"ИИТ_" + str(course), a_tag['href']):
-            table = requests.get(a_tag['href'])
-            print(table)
+                elif command == "THIS WEEK":
+                    col_name = "even" if even_week else "odd"
+                    for i in range(6):
+                        message = ""
+                        if i == 0:
+                            message += "Расписание на эту неделю"
+                        message += "\n\n" + weekdays[i]
+                        message += formatted_message(schedule_data, weekdays[i], col_name, current_week)
+                        result.append(message)
 
-            with open("table.xlsx", "wb") as f:
-                f.write(table.content)
+                elif command == "NEXT WEEK":
+                    col_name = "odd" if even_week else "even"
+                    for i in range(6):
+                        message = ""
+                        if i == 0:
+                            message += "Расписание на следующую неделю"
+                        message += "\n\n" + weekdays[i]
+                        message += formatted_message(schedule_data, weekdays[i], col_name, current_week+1)
+                        result.append(message)
 
-            book = openpyxl.load_workbook("table.xlsx")
-            sheet = book.active
-            num_cols = sheet.max_column
-            num_rows = sheet.max_row
+                elif command in weekdays:  # command - день недели
+                    message = f"Расписание на {command}\n"
+                    col_name = "even" if even_week else "odd"
 
-            find_group_col = 0
-            for col in range(1, num_cols):
-                if str(sheet.cell(row=2, column=col).value) == group:
-                    find_group_col = col
-                    break
+                    message += formatted_message(schedule_data, command, col_name, current_week+1)
+                    result.append(message)
 
-            schedule_data = {"odd": {}, "even": {}}
-            for d in weekdays:
-                schedule_data["odd"].update({d: {}})
-                schedule_data["even"].update({d: {}})
-                for n in "123456":
-                    schedule_data["odd"][d].update({n: {}})
-                    schedule_data["even"][d].update({n: {}})
-                    for f in "subject", "teacher", "type", "aud":
-                        schedule_data["odd"][d][n].update({f: '-'})
-                        schedule_data["even"][d][n].update({f: '-'})
-
-            i = 0
-            for row in range(4, 76):
-                subject = sheet.cell(row=row, column=find_group_col).value
-                sub_type = sheet.cell(row=row, column=find_group_col + 1).value
-                teacher = sheet.cell(row=row, column=find_group_col + 2).value
-                aud = sheet.cell(row=row, column=find_group_col + 3).value
-
-                if (row - 4) % 12 == 0:
-                    if row != 4:
-                        i += 1
-
-                if row % 2 == 0:
-                    num = str((((row - 4) % 12) + 2) // 2)
-                    col_name = "odd"
                 else:
-                    num = str((((row - 4) % 12) + 1) // 2)
-                    col_name = "even"
+                    message = "команда не распознана"
+                    result.append(message)
 
-                if re.search(r"[А-Яа-я]+", str(subject)):
-                    schedule_data[col_name][weekdays[i]][num]["subject"] = str(subject)
-                    if teacher and not re.search(r"[0-9]", str(teacher)):
-                        schedule_data[col_name][weekdays[i]][num]["teacher"] = str(teacher)
-                    if sub_type:
-                        schedule_data[col_name][weekdays[i]][num]["type"] = str(sub_type)
-                    if aud:
-                        schedule_data[col_name][weekdays[i]][num]["aud"] = str(aud)
-
-            file_data["timetable"] = schedule_data
-
-    filepath = os.path.abspath(os.curdir) + "/tables/group_schedule.json"
-    with open(filepath, 'w', encoding="utf-8") as file:
-        json.dump(file_data, file, indent=4, ensure_ascii=False)
-
-    if command == "TOD":
-        message = "Расписание на сегодня"
-        col_name = "even" if even_week else "odd"
-        message += formatted_message(file_data, today, col_name, current_week)
-        print(message)
-
-    elif command == "TOM":
-        message = "Расписание на завтра"
-        col_name = "even" if even_week else "odd"
-        if True or tomorrow == 0:
-            current_week += 1
-            col_name = "odd" if even_week else "even"
-        message += formatted_message(file_data, tomorrow, col_name, current_week)
-
-        print(message)
-
-    elif command == "THIS WEEK":
-        message = "Расписание на эту неделю"
-        col_name = "even" if even_week else "odd"
-        for i in range(6):
-            message += "\n" + formatted_message(file_data, i, col_name, current_week)
-        print(message)
-
-    elif command == "NEXT WEEK":
-        message = "Расписание на следующую неделю"
-        col_name = "odd" if even_week else "even"
-        for i in range(6):
-            message += "\n" + formatted_message(file_data, i, col_name, current_week+1)
-        print(message)
-    else:  # command - день недели
-        pass
-
+                print(result)
+                return result
 
