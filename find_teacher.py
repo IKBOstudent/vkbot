@@ -14,5 +14,7 @@ def find_teacher(teacher):
         if teacher in t.lower():
             if t not in different_teachers:
                 different_teachers.append(t)
+                if len(different_teachers) > 10:
+                    return different_teachers
 
     return different_teachers

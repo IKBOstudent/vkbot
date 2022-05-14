@@ -75,11 +75,11 @@ class Bot:
     def start(self):
         lp_listen = self.long_poll.listen()
         print("server started...")
-        with open("prev_users.json", 'r', encoding="utf-8") as file:
-            file_data = json.load(file)
-            message = "Напишите в чат \"Начать\", чтобы узнать возможности бота"
-            for user in file_data["users"]:
-                self.send_message(user["id"], message, keyboard=self.begin_keys)
+        # with open("prev_users.json", 'r', encoding="utf-8") as file:
+        #     file_data = json.load(file)
+        #     message = "БОТ ПЕРЕЗАПУЩЕН\nНапишите в чат \"Начать\", чтобы узнать возможности бота"
+        #     for user in file_data["users"]:
+        #         self.send_message(user["id"], message, keyboard=self.begin_keys)
 
         for event in lp_listen:
             if event.type == VkEventType.MESSAGE_NEW and event.text and event.to_me:
@@ -268,10 +268,7 @@ class Bot:
             return False
 
         self.send_message(msg_from, "Поиск расписания преподавателя... Ожидайте.")
-        self.teacher_schedule_sender(self.USERS_active[msg_from].teacher, command)
-
-        self.send_message(msg_from, f"расписание {self.USERS_active[msg_from].teacher} на {command}",
-                          keyboard=self.teacher_schedule_keys)
+        self.teacher_schedule_sender(msg_from, self.USERS_active[msg_from].teacher, command)
         return True
 
     def make_choose_keys(self, teachers):
@@ -321,8 +318,14 @@ class Bot:
             else:
                 self.send_message(msg_from, schedule[i])
 
-    def teacher_schedule_sender(self, teacher, command):
-        make_teacher_schedule_message(teacher, command)
+    def teacher_schedule_sender(self, msg_from, teacher, command):
+        schedule = make_teacher_schedule_message(teacher, command)
+
+        for i in range(len(schedule)):
+            if i == len(schedule) - 1:
+                self.send_message(msg_from, schedule[i], keyboard=self.teacher_schedule_keys)
+            else:
+                self.send_message(msg_from, schedule[i])
 
     def weather_parser(self, msg_from, date):
         weather = make_weather_message(date)
@@ -375,17 +378,14 @@ def main():
     vk = vk_session.get_api()
     long_poll = VkLongPoll(vk_session)
 
-    group_schedule_parser()
+    # group_schedule_parser()
     # teacher_schedule_parser()
 
     vkbot = Bot(vk_session, vk, long_poll)
-    # vkbot.start()
-    # vkbot.weather_parser("WEEK")
-    # vkbot.teacher_schedule_parser("Берков")
-    # vkbot.make_choose_keys(["иванова ев", "иванова са"])
+    vkbot.start()
 
-    # make_group_schedule_message("икбо-31-21", "NEXT WEEK")
-    # make_teacher_schedule_message("егиазарян к.т.", "TOD")
+    # make_group_schedule_message("икбо-08-21", "NEXT WEEK")
+    # make_teacher_schedule_message("гриценко", "NEXT WEEK")
     # find_teacher("хусяин")
     # find_group("икбо-31-21")
 

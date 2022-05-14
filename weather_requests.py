@@ -76,7 +76,7 @@ def formatted_weather(description,
 
 
 def make_weather_message(date):
-    print(f"погода на {date}")
+    print(f"погода в Москве на {date}")
     today = f"{datetime.datetime.now():%Y-%m-%d}"
     tomorrow = f"{(datetime.datetime.now() + datetime.timedelta(days=1)):%Y-%m-%d}"
     after_tom = f"{(datetime.datetime.now() + datetime.timedelta(days=2)):%Y-%m-%d}"
@@ -87,16 +87,8 @@ def make_weather_message(date):
     else:
         url = f"https://api.openweathermap.org/data/2.5/forecast?id={city_id}&appid={my_api}&units=metric&lang=ru"
 
-    # print(url)
     try:
         response_weather = requests.get(url)
-        # filepath = os.path.abspath(os.curdir) + "/tables/weather.json"
-        # with open(filepath, 'w', encoding='utf-8') as f:
-        #     json.dump(response_weather.json(), f, ensure_ascii=False, indent=4)
-        #
-        # with open(filepath, 'r', encoding='utf-8') as f:
-        #     weather = json.load(f)
-
         weather = response_weather.json()
         icons = []
         result = []

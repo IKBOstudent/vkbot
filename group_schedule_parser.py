@@ -71,14 +71,15 @@ def group_schedule_parser():
                     if re.search(r"[А-Яа-яёЁ]+", str(subject)):
                         schedule_data[col_name][weekdays[i]][num]["subject"] = str(subject)
                         if teacher and not re.search(r"[0-9]", str(teacher)):
-                            exclusive = "Гриценко"
+                            exclusive1 = "Гриценко"
+                            exclusive2 = "Ноовсёлова"
                             t_list = []
-                            if exclusive not in str(teacher):
+                            if exclusive1 not in str(teacher) and exclusive2 not in str(teacher):
                                 ff = re.findall(r"[А-Яа-яЁё]+-?[А-Яа-яЁё]+ +[A-ЯЁ][., ]+[A-ЯЁ][., ]?", str(teacher))
 
                             else:
-                                if exclusive not in different_teachers:
-                                    different_teachers.append(exclusive)
+                                if exclusive1 not in different_teachers:
+                                    different_teachers.append(exclusive1)
                                 ff = str(teacher).split("\n")
 
                             for match in ff:
@@ -93,12 +94,15 @@ def group_schedule_parser():
                                     match = "Иоффе Н.Е"
                                 elif match == "Ануфриев О. С":
                                     match = "Ануфриев О.С"
+                                elif match == "Ноовсёлова":
+                                    match = "Новосёлова Е.В"
 
                                 t_list.append(match)
                                 if match not in different_teachers:
                                     different_teachers.append(match)
 
-                            schedule_data[col_name][weekdays[i]][num]["teacher"] = "\n".join(t_list)
+                            if len(t_list) > 0:
+                                schedule_data[col_name][weekdays[i]][num]["teacher"] = "\n".join(t_list)
 
                         if sub_type:
                             schedule_data[col_name][weekdays[i]][num]["type"] = str(sub_type)
