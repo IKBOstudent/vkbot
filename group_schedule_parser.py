@@ -89,12 +89,12 @@ def group_schedule_parser():
                                 ff = str(teacher).split("\n")
 
                             for match in ff:
-                                if match[-1] == ".":
-                                    match = match[:-1]
-
                                 match = match.replace("  ", " ")
                                 match = match.replace("..", ".")
                                 match = match.strip()
+
+                                if match[-1] == ".":
+                                    match = match[:-1]
 
                                 if match == "Иоффе Н Е":
                                     match = "Иоффе Н.Е"

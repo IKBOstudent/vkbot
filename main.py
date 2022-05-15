@@ -103,7 +103,7 @@ class Bot:
                         file.seek(0)
                         json.dump(file_data, file, indent=4, ensure_ascii=False)
 
-                if re.search(r"[Нн]ачать", received_msg):
+                if re.search(r"начать", received_msg.lower()):
                     message = "Этот бот позволяет узнать расписание любой группы и любого преподавателя. " \
                               "\n\nЧтобы узнать расписание, напишите в чат \"расписание\"" \
                               "\n\nЧтобы узнать погоду, напишите в чат \"погода\"" \
@@ -112,7 +112,7 @@ class Bot:
                     self.send_message(msg_from, message, keyboard=self.standard_keys)
                     continue
 
-                if re.search(r"[Оо]тменить", received_msg):
+                if re.search(r"отменить", received_msg.lower()):
                     self.USERS_active[msg_from].mode = 0
                     message = "Вы вернулись в основное меню"
                     self.send_message(msg_from, message, keyboard=self.standard_keys)
@@ -155,15 +155,15 @@ class Bot:
                     continue
 
                 if self.USERS_active[msg_from].mode == 0 or not good_msg:
-                    if re.search(r"[Рр]асписание", received_msg):
+                    if re.search(r"расписание", received_msg.lower()):
                         self.USERS_active[msg_from].mode = 4
                         self.send_message(msg_from, "Введите название группы",
                                           keyboard=self.cancel_keys)
 
-                    elif re.search(r"[Нн]айти", received_msg):
+                    elif re.search(r"найти", received_msg.lower()):
                         self.USERS_active[msg_from].mode = 3
                         self.send_message(msg_from, "Поиск преподавателя... Ожидайте.")
-                        name = re.sub(r"[Нн]айти\s+", '', received_msg)
+                        name = re.sub(r"найти\s+", '', received_msg.lower())
                         teachers = find_teacher(name)
                         self.USERS_active[msg_from].teachers = teachers
                         print(teachers)
@@ -171,26 +171,26 @@ class Bot:
                         if not teachers:
                             self.send_message(msg_from, "Такого преподавателя нет(",
                                               keyboard=self.standard_keys)
-                        elif 1 < len(teachers) <= 6:
+                        elif 1 < len(teachers) <= 7:
                             self.USERS_active[msg_from].mode = 5
                             self.make_choose_keys(teachers)
                             self.send_message(msg_from, "Выберите имя преподавателя",
                                               keyboard=self.choose_teacher_keys)
-                        elif len(teachers) >= 7:
+                        elif len(teachers) >= 8:
                             self.send_message(msg_from, "По данному запросу слишком много совпадений("
                                                         "\nПопробуйте уточнить Ваш запрос...",
                                               keyboard=self.standard_keys)
                         else:
                             self.USERS_active[msg_from].teacher = teachers[0]
-                            self.send_message(msg_from, "Открываю меню расписания преподавателя",
+                            self.send_message(msg_from, f"Открываю меню расписания преподавателя {teachers[0]}",
                                               keyboard=self.teacher_schedule_keys)
 
-                    elif re.search(r"[Пп]огода", received_msg):
+                    elif re.search(r"погода", received_msg.lower()):
                         self.USERS_active[msg_from].mode = 2
                         self.send_message(msg_from, "Открываю меню погоды",
                                           keyboard=self.weather_keys)
 
-                    elif re.search(r"[Пп]омощь", received_msg):
+                    elif re.search(r"помощь", received_msg.lower()):
                         self.USERS_active[msg_from].mode = 0
                         message = "Чтобы пользоваться ботом напишите в чат что-нибудь..."
                         self.send_message(msg_from, message, keyboard=self.standard_keys)
