@@ -105,6 +105,8 @@ def group_schedule_parser():
                                 elif match == "Молчанова" or match == "Молчановва":
                                     match = "Молчанова И.В"
 
+                                if match[-1] == ".":
+                                    match = match[:-1]
                                 t_list.append(match)
                                 if match not in different_teachers:
                                     different_teachers.append(match)

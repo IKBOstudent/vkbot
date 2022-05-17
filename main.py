@@ -14,8 +14,10 @@ from teacher_schedule_parser import teacher_schedule_parser
 from weather_requests import make_weather_message
 from group_schedule_requests import make_group_schedule_message
 from teacher_schedule_requests import make_teacher_schedule_message
+from stat_requests import make_stat
 from find_teacher import find_teacher
 from find_group import find_group
+from find_region import find_region
 from Client import Client
 
 
@@ -30,10 +32,11 @@ class Bot:
         self.standard_keys = "keyboard/default.json"
         self.group_schedule_keys = "keyboard/group_schedule_keys.json"
         self.teacher_schedule_keys = "keyboard/teacher_schedule_keys.json"
-        self.choose_teacher_keys = "keyboard/choose.json"
+        self.choose_keys = "keyboard/choose.json"
         self.weather_keys = "keyboard/weather_keys.json"
         self.cancel_keys = "keyboard/cancel.json"
         self.begin_keys = "keyboard/begin.json"
+        self.covid_keys = "keyboard/covid_keys.json"
 
     def send_message(self, user_id, message, keyboard=None, attachment=None):
         try:
@@ -71,12 +74,15 @@ class Bot:
 
     def start(self):
         lp_listen = self.long_poll.listen()
-        print("server started...")
+
         # with open("prev_users.json", 'r', encoding="utf-8") as file:
         #     file_data = json.load(file)
         #     message = "БОТ ПЕРЕЗАПУЩЕН\nНапишите в чат \"Начать\", чтобы узнать возможности бота"
         #     for user in file_data["users"]:
-        #         self.send_message(user["id"], message, keyboard=self.begin_keys)
+        #         if user["id"] == 318025725:
+        #             self.send_message(user["id"], message, keyboard=self.begin_keys)
+
+        print("server started...")
 
         for event in lp_listen:
             if event.type == VkEventType.MESSAGE_NEW and event.text and event.to_me:
@@ -102,12 +108,15 @@ class Bot:
 
                         file.seek(0)
                         json.dump(file_data, file, indent=4, ensure_ascii=False)
+                else:
+                    print(self.USERS_active[msg_from].mode)
 
                 if re.search(r"начать", received_msg.lower()):
                     message = "Этот бот позволяет узнать расписание любой группы и любого преподавателя. " \
                               "\n\nЧтобы узнать расписание, напишите в чат \"расписание\"" \
                               "\n\nЧтобы узнать погоду, напишите в чат \"погода\"" \
                               "\n\nЧтобы найти преподавателя, напишите в чат \"найти фамилия преподавателя\"" \
+                              "\n\nЧтобы получить статистку по коронавирусу, напишите в чат \"ковид\"" \
                               "\n\nЧтобы вернуться в основное меню, напишите в чат \"отменить\""
                     self.send_message(msg_from, message, keyboard=self.standard_keys)
                     continue
@@ -143,7 +152,7 @@ class Bot:
                 elif self.USERS_active[msg_from].mode == 5:  # статус ввода преподавателя
                     if received_msg not in self.USERS_active[msg_from].teachers:
                         self.send_message(msg_from, "Такого варианта нет(\nПопробуйте другой...",
-                                          keyboard=self.choose_teacher_keys)
+                                          keyboard=self.choose_keys)
                         continue
 
                     self.USERS_active[msg_from].teacher = received_msg
@@ -153,6 +162,65 @@ class Bot:
                     self.send_message(msg_from, message, keyboard=self.teacher_schedule_keys)
                     self.USERS_active[msg_from].mode = 3
                     continue
+                elif self.USERS_active[msg_from].mode == 6:  # меню короны
+                    if "росси" in received_msg.lower():
+                        self.covid_handler("/country/russia/", msg_from)
+                        continue
+                    elif "регион" in received_msg.lower():
+                        self.USERS_active[msg_from].mode = 7
+                        self.send_message(msg_from, "Введите название региона",
+                                          keyboard=self.cancel_keys)
+                        continue
+                    else:
+                        good_msg = False
+
+                elif self.USERS_active[msg_from].mode == 7:  # поиск региона
+                    regions = find_region(received_msg)
+                    self.USERS_active[msg_from].regions = regions
+                    print(regions)
+                    if not regions:
+                        self.USERS_active[msg_from].mode = 6
+                        self.send_message(msg_from, "Такого региона нет(",
+                                          keyboard=self.covid_keys)
+                        continue
+                    elif 1 < len(regions) <= 7:
+                        regions_for_keys = [r[1] for r in regions]
+                        self.USERS_active[msg_from].mode = 8
+                        self.make_choose_keys(regions_for_keys)
+                        self.send_message(msg_from, "Выберите регион",
+                                          keyboard=self.choose_keys)
+                        continue
+                    elif len(regions) >= 8:
+                        self.USERS_active[msg_from].mode = 6
+                        self.send_message(msg_from, "По данному запросу слишком много совпадений("
+                                                    "\nПопробуйте уточнить Ваш запрос...",
+                                          keyboard=self.covid_keys)
+                        continue
+                    else:
+                        self.USERS_active[msg_from].mode = 6
+                        self.send_message(msg_from, f"Выбранный регион: {regions[0][1]}"
+                                                    f"\nПоиск статистики... Ожидайте.")
+                        self.covid_handler(regions[0][0], msg_from)
+                        continue
+
+                elif self.USERS_active[msg_from].mode == 8:  # выбор региона
+                    found = False
+                    link = ""
+                    for i in self.USERS_active[msg_from].regions:
+                        if received_msg == i[1]:
+                            found = True
+                            link = i[0]
+                            break
+                    if not found:
+                        self.send_message(msg_from, "Такого варианта нет(\nПопробуйте другой...",
+                                          keyboard=self.choose_keys)
+                        continue
+
+                    self.send_message(msg_from, "Поиск статистики... Ожидайте.")
+                    self.covid_handler(link, msg_from)
+                    self.USERS_active[msg_from].mode = 6
+                    continue
+
 
                 if self.USERS_active[msg_from].mode == 0 or not good_msg:
                     if re.search(r"расписание", received_msg.lower()):
@@ -161,7 +229,6 @@ class Bot:
                                           keyboard=self.cancel_keys)
 
                     elif re.search(r"найти", received_msg.lower()):
-                        self.USERS_active[msg_from].mode = 3
                         self.send_message(msg_from, "Поиск преподавателя... Ожидайте.")
                         name = re.sub(r"найти\s+", '', received_msg.lower())
                         teachers = find_teacher(name)
@@ -169,18 +236,20 @@ class Bot:
                         print(teachers)
 
                         if not teachers:
+                            self.USERS_active[msg_from].mode = 0
                             self.send_message(msg_from, "Такого преподавателя нет(",
                                               keyboard=self.standard_keys)
                         elif 1 < len(teachers) <= 7:
                             self.USERS_active[msg_from].mode = 5
                             self.make_choose_keys(teachers)
                             self.send_message(msg_from, "Выберите имя преподавателя",
-                                              keyboard=self.choose_teacher_keys)
+                                              keyboard=self.choose_keys)
                         elif len(teachers) >= 8:
                             self.send_message(msg_from, "По данному запросу слишком много совпадений("
                                                         "\nПопробуйте уточнить Ваш запрос...",
                                               keyboard=self.standard_keys)
                         else:
+                            self.USERS_active[msg_from].mode = 3
                             self.USERS_active[msg_from].teacher = teachers[0]
                             self.send_message(msg_from, f"Открываю меню расписания преподавателя {teachers[0]}",
                                               keyboard=self.teacher_schedule_keys)
@@ -189,6 +258,10 @@ class Bot:
                         self.USERS_active[msg_from].mode = 2
                         self.send_message(msg_from, "Открываю меню погоды",
                                           keyboard=self.weather_keys)
+                    elif "корона" in received_msg.lower() or "ковид" in received_msg.lower():
+                        self.USERS_active[msg_from].mode = 6
+                        self.send_message(msg_from, "Открываю меню статистики коронавируса",
+                                          keyboard=self.covid_keys)
 
                     elif re.search(r"помощь", received_msg.lower()):
                         self.USERS_active[msg_from].mode = 0
@@ -273,7 +346,7 @@ class Bot:
     def make_choose_keys(self, teachers):
         teachers.append("Отменить")
 
-        with open(self.choose_teacher_keys, 'w', encoding="utf-8") as file:
+        with open(self.choose_keys, 'w', encoding="utf-8") as file:
             file_data = {"one_time": True, "buttons": []}
 
             for i in teachers:
@@ -308,6 +381,18 @@ class Bot:
         self.send_message(msg_from, "Поиск погоды... Ожидайте.")
         self.weather_parser(msg_from, message)
         return True
+
+    def covid_handler(self, link, msg_from):
+        stat = make_stat(link)
+
+        if "russia" in link:
+            upload = VkUpload(self.vk)
+            photo = upload.photo_messages('stat.png')[0]
+            attachment = f"photo{photo['owner_id']}_{photo['id']}"
+            self.send_message(msg_from, stat, keyboard=self.covid_keys, attachment=attachment)
+        else:
+            self.send_message(msg_from, stat, keyboard=self.covid_keys)
+
 
     def group_schedule_sender(self, msg_from, group, command):
         schedule = make_group_schedule_message(group, command)
@@ -385,6 +470,9 @@ def main():
 
     # make_group_schedule_message("икбо-08-21", "NEXT WEEK")
     # make_teacher_schedule_message("Богомольная Г.В", "NEXT WEEK")
+
+    # find_oblast("Ам")
+    # make_stat("/country/russia/")
 
 
 if __name__ == "__main__":

@@ -102,7 +102,7 @@ def make_group_schedule_message(group, command):
     group = group.upper()
     print("group", group, command)
     current_week = datetime.datetime.now().date() - \
-                   datetime.datetime.strptime("07.02.2022", '%d.%m.%Y').date()
+                   datetime.datetime.strptime("06.02.2022", '%d.%m.%Y').date()
     current_week = math.ceil(current_week.days / 7)
     even_week = current_week % 2 == 0
 

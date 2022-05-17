@@ -18,6 +18,13 @@
     [{
       "action": {
         "type": "text",
+        "label": "статистика ковид-19"
+      },
+      "color": "primary"
+    }],
+    [{
+      "action": {
+        "type": "text",
         "label": "помощь"
       },
       "color": "default"

@@ -5,7 +5,7 @@
             {
                 "action": {
                     "type": "text",
-                    "label": "Прокопчук А.Р"
+                    "label": "Москва"
                 },
                 "color": "primary"
             }
@@ -14,7 +14,7 @@
             {
                 "action": {
                     "type": "text",
-                    "label": "Прокекопчук А.Р"
+                    "label": "Московская обл."
                 },
                 "color": "primary"
             }
@@ -23,7 +23,7 @@
             {
                 "action": {
                     "type": "text",
-                    "label": "Пронина Е.В"
+                    "label": "Приморский край"
                 },
                 "color": "primary"
             }
@@ -32,7 +32,7 @@
             {
                 "action": {
                     "type": "text",
-                    "label": "Проонина Е.В"
+                    "label": "Смоленская обл."
                 },
                 "color": "primary"
             }
@@ -41,16 +41,7 @@
             {
                 "action": {
                     "type": "text",
-                    "label": "Продан Р.К"
-                },
-                "color": "primary"
-            }
-        ],
-        [
-            {
-                "action": {
-                    "type": "text",
-                    "label": "Пронина Е.Н"
+                    "label": "Республика Мордовия"
                 },
                 "color": "primary"
             }
