@@ -19,6 +19,7 @@ def make_stat(link):
     try:
         page = requests.get(url)
         soup = BeautifulSoup(page.text, "html.parser")
+        # print(page)
 
         result = {}
         stat = soup.find("div", {"class": "row justify-content-md-center"})
@@ -91,7 +92,7 @@ def make_stat(link):
         return message
     except Exception:
         print(f"something wrong with {url}")
-
+        return "BAD"
 
 
 

@@ -23,33 +23,6 @@
             {
                 "action": {
                     "type": "text",
-                    "label": "Приморский край"
-                },
-                "color": "primary"
-            }
-        ],
-        [
-            {
-                "action": {
-                    "type": "text",
-                    "label": "Смоленская обл."
-                },
-                "color": "primary"
-            }
-        ],
-        [
-            {
-                "action": {
-                    "type": "text",
-                    "label": "Республика Мордовия"
-                },
-                "color": "primary"
-            }
-        ],
-        [
-            {
-                "action": {
-                    "type": "text",
                     "label": "Отменить"
                 },
                 "color": "negative"

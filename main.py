@@ -384,6 +384,10 @@ class Bot:
 
     def covid_handler(self, link, msg_from):
         stat = make_stat(link)
+        if stat == "BAD":
+            print("Сервер недоступен")
+            self.send_message(msg_from, "Сервер недоступен", keyboard=self.covid_keys)
+            return
 
         if "russia" in link:
             upload = VkUpload(self.vk)
@@ -392,7 +396,6 @@ class Bot:
             self.send_message(msg_from, stat, keyboard=self.covid_keys, attachment=attachment)
         else:
             self.send_message(msg_from, stat, keyboard=self.covid_keys)
-
 
     def group_schedule_sender(self, msg_from, group, command):
         schedule = make_group_schedule_message(group, command)
@@ -456,7 +459,7 @@ class Bot:
 
 
 def main():
-    with open("file.txt", 'r') as f:
+    with open("file.txt", 'r') as f:  # WARNING no vk group api
         vk_session = vk_api.VkApi(token=f.readline())
 
     vk = vk_session.get_api()
@@ -467,12 +470,6 @@ def main():
 
     vkbot = Bot(vk_session, vk, long_poll)
     vkbot.start()
-
-    # make_group_schedule_message("икбо-08-21", "NEXT WEEK")
-    # make_teacher_schedule_message("Богомольная Г.В", "NEXT WEEK")
-
-    # find_oblast("Ам")
-    # make_stat("/country/russia/")
 
 
 if __name__ == "__main__":

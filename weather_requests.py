@@ -4,11 +4,8 @@ import os
 from PIL import Image
 import datetime
 
-my_api = "4f35276e9892e31276c03a9889e7c3a2"
+my_api = "---api---"  # WARNING no weather api
 city_id = "524901"  # moscow
-
-
-# city_id = "2643743"  # london
 
 
 def wind_direction(degrees):
