@@ -1,4 +1,4 @@
-class Client:
+class Users:
     group = ""
     teacher = ""
     region = ""

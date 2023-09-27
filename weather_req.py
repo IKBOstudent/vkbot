@@ -4,7 +4,7 @@ import os
 from PIL import Image
 import datetime
 
-my_api = "---api---"  # WARNING no weather api
+my_api = "4f35276e9892e31276c03a9889e7c3a2"  # WARNING no weather api
 city_id = "524901"  # moscow
 
 
@@ -80,9 +80,9 @@ def make_weather_message(date):
     # print(today, tomorrow, after_tom)
 
     if date == "NOW":
-        url = f"https://api.openweathermap.org/data/2.5/weather?id={city_id}&appid={my_api}&units=metric&lang=ru"
+        url = f"http://api.openweathermap.org/data/2.5/weather?id={city_id}&appid={my_api}&units=metric&lang=ru"
     else:
-        url = f"https://api.openweathermap.org/data/2.5/forecast?id={city_id}&appid={my_api}&units=metric&lang=ru"
+        url = f"http://api.openweathermap.org/data/2.5/forecast?id={city_id}&appid={my_api}&units=metric&lang=ru"
 
     try:
         response_weather = requests.get(url)

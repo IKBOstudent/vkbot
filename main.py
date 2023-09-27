@@ -8,17 +8,18 @@ import re
 import os
 import requests
 import json
+import unittest
 
-from group_schedule_parser import group_schedule_parser
-from teacher_schedule_parser import teacher_schedule_parser
-from weather_requests import make_weather_message
-from group_schedule_requests import make_group_schedule_message
-from teacher_schedule_requests import make_teacher_schedule_message
-from stat_requests import make_stat
-from find_teacher import find_teacher
-from find_group import find_group
-from find_region import find_region
-from Client import Client
+from schedule_pars_group import group_schedule_parser
+from schedule_pars_teach import teacher_schedule_parser
+from weather_req import make_weather_message
+from schedule_req_group import make_group_schedule_message
+from schedule_teach_req import make_teacher_schedule_message
+from statistic_req import make_stat
+from search_teacher import find_teacher
+from search_group import find_group
+from search_region import find_region
+from Users import Users
 
 
 class Bot:
@@ -74,25 +75,23 @@ class Bot:
 
     def start(self):
         lp_listen = self.long_poll.listen()
-
-        # with open("prev_users.json", 'r', encoding="utf-8") as file:
-        #     file_data = json.load(file)
-        #     message = "БОТ ПЕРЕЗАПУЩЕН\nНапишите в чат \"Начать\", чтобы узнать возможности бота"
-        #     for user in file_data["users"]:
-        #         if user["id"] == 318025725:
-        #             self.send_message(user["id"], message, keyboard=self.begin_keys)
-
-        print("server started...")
+        with open("prev_users.json", 'r', encoding="utf-8") as file:
+            file_data = json.load(file)
+            message = "БОТ ПЕРЕЗАПУЩЕН\nНапишите в чат \"Начать\", чтобы узнать возможности бота"
+            for user in file_data["users"]:
+                if user["id"] == 254667838:
+                    self.send_message(user["id"], message, keyboard=self.begin_keys)
+        print("Бот перезапущен")
 
         for event in lp_listen:
             if event.type == VkEventType.MESSAGE_NEW and event.text and event.to_me:
                 received_msg = event.text
                 msg_from = event.user_id
 
-                print(f'New message from {msg_from}, text = {received_msg}')
+                print(f'Новое сообщение от {msg_from}: "{received_msg}"')
 
                 if msg_from not in self.USERS_active:
-                    self.USERS_active[msg_from] = Client()
+                    self.USERS_active[msg_from] = Users()
 
                     with open("prev_users.json", 'r+', encoding="utf-8") as file:
                         file_data = json.load(file)
@@ -220,7 +219,6 @@ class Bot:
                     self.covid_handler(link, msg_from)
                     self.USERS_active[msg_from].mode = 6
                     continue
-
 
                 if self.USERS_active[msg_from].mode == 0 or not good_msg:
                     if re.search(r"расписание", received_msg.lower()):
@@ -383,7 +381,7 @@ class Bot:
         return True
 
     def covid_handler(self, link, msg_from):
-        stat = make_stat(link)
+        stat = make_stat("https://coronavirusstat.ru/", link)
         if stat == "BAD":
             print("Сервер недоступен")
             self.send_message(msg_from, "Сервер недоступен", keyboard=self.covid_keys)
@@ -458,9 +456,40 @@ class Bot:
                     self.send_message(msg_from, weather['message'][i], attachment=attachment)
 
 
+class Testing(unittest.TestCase):
+
+    # Тест для существующей группы
+    def test_existing_group(self):
+        self.assertTrue(find_group("ИКБО-16-21"))
+
+    # Тест для несуществующей группы
+    def test_non_existing_group(self):
+        self.assertFalse(find_group("АБВГ-00-00"))
+
+    # Тест для существующего учителя
+    def test_existing_teacher(self):
+        result = find_teacher("Архангельский А.И")
+        self.assertEqual(result, ["Архангельский А.И"])
+
+    # Тест для несуществующего учителя
+    def test_non_existing_teacher(self):
+        result = find_teacher("Щыыфа А.Б")
+        self.assertEqual(result, [])
+
+    #Тест для существующей ссылки
+    def test_existing_link(self):
+        result = make_stat("/country/moskva/")
+        self.assertNotEqual(result, "BAD")
+
+    #Тест для несуществующей ссылки
+    def test_notexisting_link(self):
+        result = make_stat("/asdafa/sadadasd/")
+        self.assertEqual(result, "BAD")
+
+    
+
 def main():
-    with open("file.txt", 'r') as f:  # WARNING no vk group api
-        vk_session = vk_api.VkApi(token=f.readline())
+    """vk_session = vk_api.VkApi(token="f258e06b316a800ff5d4657841ebdb17cfe84518b44dbaaceef5ad2f5109af06d8fe052aceb21e722afd9")
 
     vk = vk_session.get_api()
     long_poll = VkLongPoll(vk_session)
@@ -469,8 +498,13 @@ def main():
     # teacher_schedule_parser()
 
     vkbot = Bot(vk_session, vk, long_poll)
-    vkbot.start()
+    vkbot.start()"""
+    
+
+    unittest.main()
+   
 
 
 if __name__ == "__main__":
     main()
+

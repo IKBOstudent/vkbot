@@ -14,10 +14,10 @@ from matplotlib.ticker import ScalarFormatter
 
 
 def make_stat(link):
-    url = "https://coronavirusstat.ru" + link
+    url = "https://coronavirusstat.ru/" + link
     need_dynamics = "russia" in link
     try:
-        page = requests.get(url)
+        page = requests.get(url, allow_redirects=False)
         soup = BeautifulSoup(page.text, "html.parser")
         # print(page)
 
@@ -35,7 +35,7 @@ def make_stat(link):
         for i in result.keys():
             message += f'\n{i}: {result[i]["total"]} ({result[i]["today"]} за сегодня)'
 
-        print(message)
+        #print(message)
 
         if need_dynamics:
             dates = []
@@ -68,7 +68,7 @@ def make_stat(link):
 
                 ci += 1
 
-            print(dynamics)
+            #print(dynamics)
 
             x = [datetime.datetime.strptime(i, '%d.%m.%Y').date() for i in dates]
 

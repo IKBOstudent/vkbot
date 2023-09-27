@@ -12,9 +12,7 @@ def group_schedule_parser():
     page = requests.get("https://www.mirea.ru/schedule/")
     soup = BeautifulSoup(page.text, "html.parser")
 
-    result = soup.find("div", {"class": "rasspisanie"}). \
-        find(string="Институт информационных технологий"). \
-        find_parent("div").find_parent("div").find_all("a", {"class": "uk-link-toggle"})
+    result = soup.find("div", {"class": "rasspisanie"}).find(string="Институт информационных технологий").find_parent("div").find_parent("div").find_all("a", {"class": "uk-link-toggle"})
 
     file_data = {"groups": []}
     different_teachers = []
@@ -25,10 +23,10 @@ def group_schedule_parser():
 
         table = requests.get(a_tag['href'])
 
-        with open("table.xlsx", "wb") as f:
+        with open("schedule.xlsx", "wb") as f:
             f.write(table.content)
 
-        book = openpyxl.load_workbook("table.xlsx")
+        book = openpyxl.load_workbook("schedule.xlsx")
         sheet = book.active
         num_cols = sheet.max_column
 
@@ -95,15 +93,6 @@ def group_schedule_parser():
 
                                 if match[-1] == ".":
                                     match = match[:-1]
-
-                                if match == "Иоффе Н Е":
-                                    match = "Иоффе Н.Е"
-                                elif match == "Ануфриев О. С":
-                                    match = "Ануфриев О.С"
-                                elif match == "Ноовсёлова":
-                                    match = "Новосёлова Е.В"
-                                elif match == "Молчанова" or match == "Молчановва":
-                                    match = "Молчанова И.В"
 
                                 if match[-1] == ".":
                                     match = match[:-1]
